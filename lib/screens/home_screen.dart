@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/supabase_services.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -13,16 +15,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final textController = TextEditingController();
-  final TextEditingController titleController = TextEditingController();
+  final titleController = TextEditingController();
+  final SupaBaseService supaBaseData = SupaBaseService(Supabase.instance.client);
+
   List<dynamic> notes = [];
 
-  final SupabaseClient supaBase = Supabase.instance.client;
-
   Future<void> fetchNotes() async {
-    final response = await supaBase
-        .from('notes')
-        .select()
-        .order('created_at', ascending: false);
+    final response = await supaBaseData.fetchNotes();
     setState(() {
       notes = response;
     });
@@ -32,135 +31,187 @@ class _HomeScreenState extends State<HomeScreen> {
     if (titleController.text.isEmpty || textController.text.isEmpty) {
       return;
     }
-    await supaBase.from('notes').insert({
-      'title': titleController.text,
-      'body': textController.text,
-    });
+    await supaBaseData.addNote(
+      titleController.text,
+      textController.text,
+    );
     titleController.clear();
     textController.clear();
     fetchNotes();
   }
 
-  Future<void> deleteNote(int id) async {
-    await supaBase.from('notes').delete().eq('id', id);
+  Future<void> deleteNoteHandler(int id) async {
+    await supaBaseData.deleteNote(id);
     fetchNotes();
   }
 
-  Future<void> editNotes(int id) async {
-    await supaBase.from('notes').update({
-      "title":titleController.text,
-      "body":textController.text
-      
-    }).eq("id", id);
-    
+  Future<void> editNoteHandler(int id) async {
+    await supaBaseData.editNote(
+      id,
+      titleController.text,
+      textController.text,
+    );
     fetchNotes();
   }
+
   @override
   void initState() {
     super.initState();
     fetchNotes();
   }
-  showDialogBox() async {
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("title"),
-                SizedBox(
-                  height: 10,
-                ),
-                TextFieldWidget(
-                    textFieldColor: Colors.grey,
-                    maxLines: 1,
-                    textFieldController: titleController,
-                    hintText: "title",
-                    obscureText: false),
-              ],
+
+  Future<void> showDialogBox() async {
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [Colors.purpleAccent, Colors.blueAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    addNote();
-                  },
-                  child: Text("Save"))
-            ],
-            content: TextFieldWidget(
-                textFieldColor: Colors.grey,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Add Note",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFieldWidget(
+                textStyle: fourteen400TextStyle(color: Colors.black),
+                textFieldColor: Colors.white.withOpacity(0.9),
+                maxLines: 1,
+                textFieldController: titleController,
+                hintText: "Enter title",
+
+                obscureText: false,
+              ),
+              const SizedBox(height: 10),
+              TextFieldWidget(
+                textStyle: fourteen400TextStyle(color: Colors.black),
+
+                textFieldColor: Colors.white.withOpacity(0.9),
                 maxLines: 4,
                 textFieldController: textController,
-                hintText: "notes",
-                obscureText: false)));
-  }
-  showDialogBoxEdit({required String title, required String content, int ?id}) async {
-    
-    titleController.text=title;
-    textController.text=content;
-    showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-            title: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("title"),
-                SizedBox(
-                  height: 10,
+                hintText: "Enter notes",
+                obscureText: false,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  addNote();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
-                TextFieldWidget(
-                    textFieldColor: Colors.grey,
-                    maxLines: 1,
-                    textFieldController: titleController,
-                    hintText: "title",
-                    obscureText: false),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                   editNotes(id!);
-                  },
-                  child: Text("update"))
+                child: const Text("Save"),
+              ),
             ],
-            content: TextFieldWidget(
-                textFieldColor: Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> showDialogBoxEdit({required String title, required String content, required int id}) async {
+    titleController.text = title;
+    textController.text = content;
+
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [Colors.orangeAccent, Colors.redAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Edit Note",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFieldWidget(
+                textFieldColor: Colors.white.withOpacity(0.9),
+                maxLines: 1,
+                textFieldController: titleController,
+                hintText: "Edit title",
+                obscureText: false,
+              ),
+              const SizedBox(height: 10),
+              TextFieldWidget(
+                textFieldColor: Colors.white.withOpacity(0.9),
                 maxLines: 4,
                 textFieldController: textController,
-                hintText: "notes",
-                obscureText: false)));
+                hintText: "Edit notes",
+                obscureText: false,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  editNoteHandler(id);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text("Update"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.red,
-          onPressed: () async {
-            await showDialogBox();
-          },
-          child: Icon(
-            Icons.add,
-            color: Colors.white,
-          )),
+        backgroundColor: Colors.red,
+        onPressed: () => showDialogBox(),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 40,
-            ),
-
-            Text("Add short Notes", style: twenty600TextStyle(color: Colors.black),),
-
-            SizedBox(height: 30),
+            const SizedBox(height: 70),
+            Text("Add Short Notes", style: twenty600TextStyle(color: Colors.black)),
+            const SizedBox(height: 30),
             Expanded(
               child: ListView.builder(
                 itemCount: notes.length,
@@ -168,25 +219,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   final note = notes[index];
                   return Card(
                     margin: const EdgeInsets.all(8.0),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    elevation: 5,
                     child: ListTile(
-                      title: Text(note['title'].toString()),
+                      title: Text(note['title'].toString(), style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text(note['body'].toString()),
                       trailing: SizedBox(
-                        width: 100, // Adjust width to fit your icons comfortably
+                        width: 100,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             IconButton(
-                              icon: Icon(FontAwesomeIcons.penToSquare, color: Colors.red),
+                              icon: const Icon(FontAwesomeIcons.penToSquare, color: Colors.red),
                               onPressed: () => showDialogBoxEdit(
                                 title: note['title'].toString(),
                                 content: note['body'].toString(),
-                                id: note['id']
+                                id: note['id'],
                               ),
                             ),
                             IconButton(
-                              icon: Icon(FontAwesomeIcons.trash, color: Colors.red),
-                              onPressed: () => deleteNote(note['id']),
+                              icon: const Icon(FontAwesomeIcons.trash, color: Colors.red),
+                              onPressed: () => deleteNoteHandler(note['id']),
                             ),
                           ],
                         ),
@@ -195,11 +248,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-            )
-
+            ),
           ],
         ),
       ),
     );
   }
 }
+

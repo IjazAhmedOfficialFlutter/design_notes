@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../utilities/app_colors.dart';
 import '../utilities/app_text_styles_poppins.dart';
 
-
 class TextFieldWidget extends StatefulWidget {
   final String hintText;
   final TextEditingController? textFieldController;
@@ -17,21 +16,26 @@ class TextFieldWidget extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onTap;
   final Color? textFieldColor;
+  final TextStyle? textStyle; // Custom text style for input
+  final TextStyle? hintTextStyle; // Custom hint text style
 
-  const TextFieldWidget(
-      {super.key,
-      required this.hintText,
-      this.textFieldController,
-      this.readOnly = false,
-      this.enabled = true,
-      this.maxLines = 1,
-      this.textFieldColor = Colors.transparent,
-      this.validator,
-      this.maxCharacters,
-      required this.obscureText,
-      this.suffixIcon,
-      this.prefixIcon,
-      this.onTap});
+  const TextFieldWidget({
+    super.key,
+    required this.hintText,
+    this.textFieldController,
+    this.readOnly = false,
+    this.enabled = true,
+    this.maxLines = 1,
+    this.textFieldColor = Colors.transparent,
+    this.validator,
+    this.maxCharacters,
+    required this.obscureText,
+    this.suffixIcon,
+    this.prefixIcon,
+    this.onTap,
+    this.textStyle, // Added parameter for text style
+    this.hintTextStyle, // Added parameter for hint text style
+  });
 
   @override
   State<TextFieldWidget> createState() => _TextFieldWidgetState();
@@ -49,9 +53,8 @@ class _TextFieldWidgetState extends State<TextFieldWidget> {
       obscureText: widget.obscureText,
       readOnly: widget.readOnly,
       onTap: widget.onTap,
-      style: const TextStyle(color: Colors.white),
+      style: widget.textStyle ?? const TextStyle(color: Colors.white), // Apply custom style
       decoration: InputDecoration(
-
         suffixIcon: widget.suffixIcon,
         prefixIcon: widget.prefixIcon,
         contentPadding: const EdgeInsets.symmetric(
@@ -60,7 +63,7 @@ class _TextFieldWidgetState extends State<TextFieldWidget> {
         ),
         filled: true,
         fillColor: widget.textFieldColor,
-        hintStyle: fourteen400TextStyle(color: Colors.white),
+        hintStyle: widget.hintTextStyle ?? fourteen400TextStyle(color: Colors.grey), // Apply custom hint style
         hintText: widget.hintText,
         border: InputBorder.none,
         enabledBorder: OutlineInputBorder(
